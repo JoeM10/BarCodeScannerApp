@@ -1,0 +1,1 @@
+**This is a simple barcode scanner application built using Python and OpenCV. It allows users to scan barcodes using their device's camera and decode the information contained within the barcode. The application supports various barcode formats, including QR codes, Code 128, and EAN-13.
