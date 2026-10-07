@@ -1,15 +1,40 @@
 import { StatusBar } from 'expo-status-bar';
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { Scan } from './src/types/scan';
 import { randomUUID } from 'expo-crypto';
 import * as Clipboard from 'expo-clipboard';
+import { SQLiteProvider, useSQLiteContext } from 'expo-sqlite';
+import { getScans, initializeDatabase, insertScan } from './src/database/scans';
 
-export default function App() {
+function ScanScreen() {
   const [scans, setScans] = useState<Scan[]>([]);
   const [manualValue, setManualValue] = useState("");
 
-  function handleAddScan() {
+  const db = useSQLiteContext();
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadSavedScans() {
+      try {
+        const savedScans = await getScans(db);
+        if (active) {
+          setScans(savedScans);
+        }
+      } catch (error) {
+        console.error('Could not load scans:', error);
+      }
+    }
+
+    void loadSavedScans();
+
+    return () => {
+      active = false;
+    };
+  }, [db]);
+
+  async function handleAddScan() {
     if (manualValue.trim() === "") {
       return;
     }
@@ -21,6 +46,7 @@ export default function App() {
       scannedAt: new Date().toISOString(),
     };
 
+    await insertScan(db, newScan);
     setScans((currentScans) => [...currentScans, newScan]);
     setManualValue("");
   }
@@ -55,6 +81,14 @@ export default function App() {
       <Button title='Copy to Clipboard' onPress={handleCopyValues} />
       <StatusBar style="auto" />
     </View>
+  );
+}
+
+export default function App() {
+  return (
+    <SQLiteProvider databaseName="scans.db" onInit={initializeDatabase}>
+      <ScanScreen />
+    </SQLiteProvider>
   );
 }
 
